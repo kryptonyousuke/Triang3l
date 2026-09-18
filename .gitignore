@@ -1,1 +1,4 @@
 .key
+__pycache__/
+*.pyc
+
