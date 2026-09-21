@@ -8,9 +8,7 @@ import discord
 from discord.ext import commands
 from triang3l.triang3l import Triang3l
 
-intents = discord.Intents.default()
-intents.message_content = True
-        
+intents = discord.Intents.all()        
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 if __name__ == '__main__':
