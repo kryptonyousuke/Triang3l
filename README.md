@@ -53,7 +53,7 @@ We didn't built stable contribution standards yet, so feel free to do it at your
 <div align="center">
     <p><b>Buy us a coffee!</b></p>
     <a href="https://github.com/sponsors/kryptonyousuke">
-        <img src="https://raw.githubusercontent.com/kryptonyousuke/kryptonyousuke/fc854bb8ea379c5afae709335869132f9e412cf1/sponsor.svg" alt="Sponsor Aura" width="220" />
+        <img src="https://raw.githubusercontent.com/kryptonyousuke/kryptonyousuke/61fc1068d44d816eb0fccea61a2ca09ac48b032a/sponsor.svg" alt="Sponsor Aura" width="220" />
     </a>
 </div>
 
