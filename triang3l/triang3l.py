@@ -6,7 +6,9 @@
 
 import discord
 import aioconsole
+import asyncio
 
+from database import database
 from session import session_manager as session
 
 class Triang3l:
@@ -17,11 +19,13 @@ class Triang3l:
         self.intents = intents
 
     def setup_commands(self):
+        
         @self.bot.event
         async def on_ready():
             try:
                 synced = await self.bot.tree.sync()
                 await aioconsole.aprint(f"Connected as {self.bot.user} | {len(synced)} command(s) synchronized.")
+                self.db = await database.Database.create("Triang3l.db")
             except Exception as e:
                 await aioconsole.aprint(f"Failed to sync commands: {e}")
  
@@ -39,6 +43,8 @@ class Triang3l:
         @self.bot.tree.command(name="ping", description="Show the latency.")
         async def ping(interaction: discord.Interaction):
             latency = round(self.bot.latency * 1000)
+            async with self.db as db:
+                print(db)
             await interaction.response.send_message(f"Pong! Latency: {latency}ms")
 
         """
