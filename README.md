@@ -33,12 +33,20 @@ Triang3l does **not** store any sensitive content about your server or anything 
 The oficial Discord API provides everything that is needed to do our tasks, the only system that depends on extern infos is the invite one, but it has an so simple and pragmatic logic that it's pretty easy to prevent any kind of hacking attemptive.
 
 ## 📊 Performance
+
+### CPU
 Triang3l is full asynchronous based, then we have only two bottlenecks: the single-threaded architecture (that can be changed in the future) and the python VM itself.
 
 For large scale bots (1+ Million daily users) this is potentially something that needs some kind of enhancements and attention to avoid expensive hosting fees or even to use everything that your hosting service can provide, but is usually not relevant to small/medium deploys. Since Triang3l is still under development process, that's not our main concern for now.
 
 > [!NOTE]
 > Triang3l can even run into a potato!!
+
+### RAM
+The typical RAM usage is around 56~66MB
+
+### Disk Usage
+Triang3l uses aiosqlite, which is an async implementation for sqlite3. Disk metrics will directly depends on your deploy's demand and usage.
 
 ## 🗽 Philosophy
 Despite of the fact of being still under development, Triang3l aims to be fast, secure, reliable, easy to use and easy to maintain. Beautiful and sophisticated code brings real results to the table.
