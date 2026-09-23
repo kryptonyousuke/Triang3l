@@ -13,13 +13,7 @@ from discord import app_commands
 
 from database import database
 from session import session_manager as session
-
-class colors:
-    blue   = 0x1177fc
-    white  = 0xc4c4c4
-    purple = 0xbb00ff
-    green  = 0x07d400
-    red    = 0xc41e0c
+from util.structs import colors, Group
 
 class Triang3l(discord.ext.commands.Bot):
     @session.session
@@ -32,12 +26,17 @@ class Triang3l(discord.ext.commands.Bot):
     @staticmethod
     def generate_hash() -> str:
         return secrets.token_hex(64)
+
     async def close(self):
         if self.db:
             await self.db.close()
             await aioconsole.aprint("Database connection closed successfully.")
+
     def setup_commands(self):
-        
+        ########################################
+        #                 EVENTS               #
+        ########################################
+
         @self.event
         async def on_ready():
             try:
@@ -46,7 +45,7 @@ class Triang3l(discord.ext.commands.Bot):
                 self.db = await database.Database.create("Triang3l.db")
             except Exception as e:
                 await aioconsole.aprint(f"Failed to sync commands: {e}")
- 
+
         @self.event
         async def on_disconnect():
             await aioconsole.aprint("Triang3l is now disconnected.")
@@ -57,7 +56,12 @@ class Triang3l(discord.ext.commands.Bot):
                 await aioconsole.aprint("Member banned!")
             except discord.Forbidden:
                 pass
-        
+
+
+        ########################################
+        #               COMMANDS               #
+        ########################################
+
         @self.tree.command(name="ping", description="Show the latency.")
         async def ping(interaction: discord.Interaction):
             latency = round(self.latency * 1000)
@@ -68,14 +72,13 @@ class Triang3l(discord.ext.commands.Bot):
         @app_commands.describe()
         async def setup(interaction: discord.Interaction):
             embed = discord.Embed()
-            embed.color = colors.red
+            embed.color = colors.green
             embed.description = f"""
 Server ID: {interaction.guild_id}
 Successfully registered into Tr1angel.
 """
+            await self.db.insert_server(interaction.guild.name, interaction.guild_id)
             await interaction.response.send_message(embed=embed)
-            #async with self.db as db:
-            #    db.insert_server(interaction.guild_id, interaction.guild.name)
 
         # Group handling.
         @self.tree.command(name="newgroup", description="Create a new group.")
@@ -86,7 +89,7 @@ Successfully registered into Tr1angel.
             embed = discord.Embed()
             try:
                 hash = self.generate_hash()
-                await self.db.create_group(group_name, hash)
+                await self.db.create_group(group_name, interaction.guild_id, hash)
                 embed.color = colors.green
                 embed.description = f"Successfully registered `{group_name}` with the hash `{hash}`"
                 await interaction.response.send_message(embed=embed)
@@ -99,7 +102,28 @@ Successfully registered into Tr1angel.
         @self.tree.command(name="listgroups", description="List all the groups this server is part of.")
         @app_commands.describe()
         async def listgroups(interaction: discord.Interaction):
-            await interaction.response.send_message("Pong! Latency: ms")
+            embed = discord.Embed()
+            embed.title  = "Group List"
+            embed.color = colors.white
+            description = ""
+            groups = []
+            for group_info in await self.db.fetch_groups(interaction.guild_id):
+                group = Group()
+                group_details = await self.db.fetch_group_by_id(group_info["group_id"])
+                group.group_name = group_details["name"]
+                group.group_id = group_details["id"]
+                group.group_hash = group_details["group_hash"]
+                group.server_owner_id = group_details["server_owner_id"]
+                group.server_owner_name = (await self.db.fetch_server_by_id(group_details["server_owner_id"]))["name"]
+                group = group.all_valid()
+                if group:
+                    groups.append(group)
+            for group in groups:
+                description += f"{group['group_name']} — {group['server_owner_name']} — {group['group_hash']}\n"
+
+            embed.description = description
+            
+            await interaction.response.send_message(embed=embed)
 
 
         @self.tree.command(name="joingroup", description="Request to join a group.")
