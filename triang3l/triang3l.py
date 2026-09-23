@@ -6,72 +6,191 @@
 
 import discord
 import aioconsole
-import asyncio
+import typing
+import secrets
+import aiosqlite
+from discord import app_commands
 
 from database import database
 from session import session_manager as session
 
-class Triang3l:
-    @session.session
-    def __init__(self, token: str, intents: discord.Intents, bot: discord.Bot):
-        self.token = token
-        self.bot = bot
-        self.intents = intents
+class colors:
+    blue   = 0x1177fc
+    white  = 0xc4c4c4
+    purple = 0xbb00ff
+    green  = 0x07d400
+    red    = 0xc41e0c
 
+class Triang3l(discord.ext.commands.Bot):
+    @session.session
+    def __init__(self, token: str, intents: discord.Intents):
+        super().__init__(command_prefix="!", intents=intents)
+        self.token = token
+        self.setup_commands()
+        self.db: database.Database | None = None
+
+    @staticmethod
+    def generate_hash() -> str:
+        return secrets.token_hex(64)
+    async def close(self):
+        if self.db:
+            await self.db.close()
+            await aioconsole.aprint("Database connection closed successfully.")
     def setup_commands(self):
         
-        @self.bot.event
+        @self.event
         async def on_ready():
             try:
-                synced = await self.bot.tree.sync()
-                await aioconsole.aprint(f"Connected as {self.bot.user} | {len(synced)} command(s) synchronized.")
+                synced = await self.tree.sync()
+                await aioconsole.aprint(f"Connected as {self.user} | {len(synced)} command(s) synchronized.")
                 self.db = await database.Database.create("Triang3l.db")
             except Exception as e:
                 await aioconsole.aprint(f"Failed to sync commands: {e}")
  
-        @self.bot.event
+        @self.event
         async def on_disconnect():
             await aioconsole.aprint("Triang3l is now disconnected.")
 
-        @self.bot.event
+        @self.event
         async def on_member_ban(guild: discord.Guild, user: discord.User):
             try:
                 await aioconsole.aprint("Member banned!")
             except discord.Forbidden:
                 pass
         
-        @self.bot.tree.command(name="ping", description="Show the latency.")
+        @self.tree.command(name="ping", description="Show the latency.")
         async def ping(interaction: discord.Interaction):
-            latency = round(self.bot.latency * 1000)
-            async with self.db as db:
-                print(db)
+            latency = round(self.latency * 1000)
             await interaction.response.send_message(f"Pong! Latency: {latency}ms")
 
-        """
         # Initial setup.
-        @self.bot.tree.command(name="setup", description="Register the current server into Triang3l database.")
+        @self.tree.command(name="setup", description="Register the current server into Triang3l database.")
+        @app_commands.describe()
+        async def setup(interaction: discord.Interaction):
+            embed = discord.Embed()
+            embed.color = colors.red
+            embed.description = f"""
+Server ID: {interaction.guild_id}
+Successfully registered into Tr1angel.
+"""
+            await interaction.response.send_message(embed=embed)
+            #async with self.db as db:
+            #    db.insert_server(interaction.guild_id, interaction.guild.name)
 
         # Group handling.
-        @self.bot.tree.command(name="newgroup", description="Create a new group.")
-        @self.bot.tree.command(name="listgroups", description="List all the groups this server is part of.")
-        @self.bot.tree.command(name="joingroup", description="Request to join a group.")
-        @self.bot.tree.command(name="listjoinrequests", description="List servers that requested to join to one of your groups.")
-        @self.bot.tree.command(name="rotategroupinvite", description="Rotate a group invite to a new hash.")
-        @self.bot.tree.command(name="acceptjoinrequest", description="Accept a join request by id.")
+        @self.tree.command(name="newgroup", description="Create a new group.")
+        @app_commands.describe(
+            group_name="Group name"
+        )
+        async def newgroup(interaction: discord.Interaction, group_name: str):
+            embed = discord.Embed()
+            try:
+                hash = self.generate_hash()
+                await self.db.create_group(group_name, hash)
+                embed.color = colors.green
+                embed.description = f"Successfully registered `{group_name}` with the hash `{hash}`"
+                await interaction.response.send_message(embed=embed)
+            except aiosqlite.Error:
+                embed.color = colors.red
+                embed.description = "Database exception. Try to contact the bot admins."
+                await interaction.response.send_message(embed=embed)
+
+
+        @self.tree.command(name="listgroups", description="List all the groups this server is part of.")
+        @app_commands.describe()
+        async def listgroups(interaction: discord.Interaction):
+            await interaction.response.send_message("Pong! Latency: ms")
+
+
+        @self.tree.command(name="joingroup", description="Request to join a group.")
+        @app_commands.describe(
+            group_hash="Group hash"
+        )
+        async def joingroup(interaction: discord.Interaction, group_hash: str):
+            await interaction.response.send_message("Pong! Latency: ms")
+
         
+        @self.tree.command(name="listjoinrequests", description="List servers that requested to join to one of your groups.")
+        @app_commands.describe(
+            group_hash="Group hash"
+        )
+        async def listjoinrequests(interaction: discord.Interaction, group_hash: str):
+            await interaction.response.send_message("Pong! Latency: ms")
+
+        
+        @self.tree.command(name="rotategroupinvite", description="Rotate a group invite to a new hash.")
+        @app_commands.describe(
+            group_hash="Group hash"
+        )
+        async def rotategroupinvite(interaction: discord.Interaction, group_hash: str):
+            await interaction.response.send_message("Pong! Latency: ms")
+
+        
+        @self.tree.command(name="acceptjoinrequest", description="Accept a join request by id.")
+        @app_commands.describe(
+            group_hash="Group hash",
+            request_id="Request ID"
+        )
+        async def acceptjoinrequest(interaction: discord.Interaction, group_hash: str, request_id: int):
+            await interaction.response.send_message("Pong! Latency: ms")
+
 
         # Moderation workflow commands.
-        @self.bot.tree.command(name="banlist", description="Show the ban list.")
-        @self.bot.tree.command(name="accept", description="Accept a specific ban by id.")
-        @self.bot.tree.command(name="acceptall", description="Accept all the bans marked as unreviewed.")
-        @self.bot.tree.command(name="listunreviewed", description="List all bans that needs review.")
-        @self.bot.tree.command(name="deny", description="Refuse a specific ban by id.")
-        @self.bot.tree.command(name="finishreview", description="Synchronize bans (all of them must be marked as reviewed).")
-        @self.bot.tree.command(name="releasebanlist", description="Ends the current ban list and creates a new empty one.")
-        """
-        
+        @self.tree.command(name="banlist", description="Show the ban list.")
+        @app_commands.describe(
+            group_hash="Group hash"
+        )
+        async def banlist(interaction: discord.Interaction, group_hash: str):
+            await interaction.response.send_message("Pong! Latency: ms")
 
-    def run(self):
-        self.bot.run(self.token)
-   
- 
+        
+        @self.tree.command(name="accept", description="Accept a specific ban by id.")
+        @app_commands.describe(
+            group_hash="Group hash",
+            punishment_id="Punishment Index"
+        )
+        async def accept(interaction: discord.Interaction, group_hash: str, punishment_id: int):
+            await interaction.response.send_message("Pong! Latency: ms")
+
+        
+        @self.tree.command(name="acceptall", description="Accept all the bans marked as unreviewed.")
+        @app_commands.describe(
+            group_hash="Group hash"
+        )
+        async def acceptall(interaction: discord.Interaction, group_hash: str):
+            await interaction.response.send_message("Pong! Latency: ms")
+
+        
+        @self.tree.command(name="listunreviewed", description="List all bans that needs review.")
+        @app_commands.describe(
+            group_hash="Group hash"
+        )
+        async def listunreviewed(interaction: discord.Interaction, group_hash: str):
+            await interaction.response.send_message("Pong! Latency: ms")
+
+        
+        @self.tree.command(name="deny", description="Refuse a specific ban by id.")
+        @app_commands.describe(
+            group_hash="Group hash",
+            punishment_id="Punishment Index"
+        )
+        async def deny(interaction: discord.Interaction, group_hash: str, punishment_id: int):
+            await interaction.response.send_message("Pong! Latency: ms")
+
+        
+        @self.tree.command(name="finishreview", description="Synchronize bans (all of them must be marked as reviewed).")
+        @app_commands.describe(
+            group_hash="Group hash"
+        )
+        async def finishreview(interaction: discord.Interaction, group_hash: str):
+            await interaction.response.send_message("Pong! Latency: ms")
+
+        
+        @self.tree.command(name="releasebanlist", description="Ends the current ban list and creates a new empty one.")
+        @app_commands.describe(
+            group_hash="Group hash"
+        )
+        async def releasebanlist(interaction: discord.Interaction, group_hash: str):
+            await interaction.response.send_message("Pong! Latency: ms")
+    def run_bot(self):
+        self.run(self.token)

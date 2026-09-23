@@ -9,9 +9,8 @@ from discord.ext import commands
 from triang3l.triang3l import Triang3l
 
 intents = discord.Intents.all()        
-bot = commands.Bot(command_prefix="!", intents=intents)
 
 if __name__ == '__main__':
-    triang3l = Triang3l(intents=intents, bot=bot)
-    triang3l.setup_commands()
-    triang3l.run()
+    triang3l = Triang3l(intents=intents)
+    triang3l.run_bot()
+    print("Bot is down.")
