@@ -43,3 +43,13 @@ class Group(Triang3lObject):
     server_owner_name: str | None = None
     group_name: str | None = None
 
+class BannedUser(Triang3lObject):
+    '''
+    Represents a user who was banned.
+    '''
+    username: str | None = None
+    display_name: str | None = None
+    user_id: int | None = None
+    reason: str | None = None
+    in_server_id: int | None = None
+

@@ -6,14 +6,13 @@
 
 import discord
 import aioconsole
-import typing
 import secrets
 import aiosqlite
 from discord import app_commands
 
 from database import database
 from session import session_manager as session
-from util.structs import colors, Group
+from util.structs import colors, Group, BannedUser
 
 class Triang3l(discord.ext.commands.Bot):
     @session.session
@@ -52,10 +51,15 @@ class Triang3l(discord.ext.commands.Bot):
 
         @self.event
         async def on_member_ban(guild: discord.Guild, user: discord.User):
-            try:
-                await aioconsole.aprint("Member banned!")
-            except discord.Forbidden:
-                pass
+            ban = await guild.fetch_ban(user)
+            reason = ban.reason or "No Reason Provided"
+            user_id = user.id
+            display_name = user.display_name
+            username = user.name
+            groups = await self.db.fetch_groups(guild.id)
+            await aioconsole.aprint("Member banned!")
+            for group in groups:
+                await self.db.create_punishment(user_id, display_name, username, reason, guild.id, group["group_id"])
 
 
         ########################################
@@ -72,12 +76,17 @@ class Triang3l(discord.ext.commands.Bot):
         @app_commands.describe()
         async def setup(interaction: discord.Interaction):
             embed = discord.Embed()
-            embed.color = colors.green
-            embed.description = f"""
-Server ID: {interaction.guild_id}
-Successfully registered into Tr1angel.
-"""
-            await self.db.insert_server(interaction.guild.name, interaction.guild_id)
+            embed.title = "Server Registration"
+            try:
+                embed.color = colors.green
+                embed.description = f"""Server ID: {interaction.guild_id}\nSuccessfully registered into Tr1angel."""
+                await self.db.insert_server(interaction.guild_id)
+            except aiosqlite.IntegrityError:
+                embed.color = colors.red
+                embed.description = "This server is already registered."
+            except aiosqlite.Error:
+                embed.color = colors.red
+                embed.description = "Database error. Try to contanct the bot admins."
             await interaction.response.send_message(embed=embed)
 
         # Group handling.
@@ -114,12 +123,18 @@ Successfully registered into Tr1angel.
                 group.group_id = group_details["id"]
                 group.group_hash = group_details["group_hash"]
                 group.server_owner_id = group_details["server_owner_id"]
-                group.server_owner_name = (await self.db.fetch_server_by_id(group_details["server_owner_id"]))["name"]
+                
+                group.server_owner_name = self.get_guild(group.server_owner_id).name
+                if not group.server_owner_name:
+                    try:
+                        group.server_owner_name = (await self.fetch_guild(group.server_owner_id)).name
+                    except  discord.DiscordException:
+                        group.server_owner_name = "UNKNOW"
                 group = group.all_valid()
                 if group:
                     groups.append(group)
             for group in groups:
-                description += f"{group['group_name']} — {group['server_owner_name']} — {group['group_hash']}\n"
+                description += f"{group['group_name']} — ```\nServer owner: {group['server_owner_name']}\nGroup hash: {group['group_hash']}```"
 
             embed.description = description
             
