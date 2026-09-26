@@ -7,8 +7,10 @@
 
 import aiosqlite
 
-# Triang3l database.
 class Database:
+    '''
+    Triang3l database.
+    '''
     def __init__(self, connection: aiosqlite.Connection):
         self.connection = connection
                   
@@ -16,9 +18,11 @@ class Database:
         if self.connection:
             await self.connection.close()
 
-    # Class constructor.
     @classmethod
     async def create(cls, database_name):
+        '''
+        Class constructor.
+        '''
         connection = await aiosqlite.connect(database_name)
         instance = cls(connection)
         await instance.execute("PRAGMA foreign_keys = ON;")
@@ -69,19 +73,25 @@ class Database:
     #########################################################
     #             Internal Database Handling                #
     #########################################################
-    # Execute a SQL query, returns None.
     async def execute(self, query: str, parameters: tuple = ()):
+        '''
+        Execute a SQL query, returns None.
+        '''
         async with await self.connection.execute(query, parameters) as cursor:
             await self.connection.commit()
             return cursor.lastrowid
 
-    # Execute a SQL query, returns the first match.
     async def execute_and_fetch(self, query: str, parameters: tuple = ()):
+        '''
+        Execute a SQL query, returns the first match.
+        '''
         async with self.connection.execute(query, parameters) as cursor:
             return await cursor.fetchone()
 
-    # Execute a SQL query, returns all the matched results.
     async def execute_and_fetch_all(self, query: str, parameters: tuple = ()):
+        '''
+        Execute a SQL query, returns all the matched results.
+        '''
         async with self.connection.execute(query, parameters) as cursor:
             return await cursor.fetchall()
 
