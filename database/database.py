@@ -81,14 +81,14 @@ class Database:
             await self.connection.commit()
             return cursor.lastrowid
 
-    async def execute_and_fetch(self, query: str, parameters: tuple = ()):
+    async def execute_and_fetch(self, query: str, parameters: tuple):
         '''
         Execute a SQL query, returns the first match.
         '''
         async with self.connection.execute(query, parameters) as cursor:
             return await cursor.fetchone()
 
-    async def execute_and_fetch_all(self, query: str, parameters: tuple = ()):
+    async def execute_and_fetch_all(self, query: str, parameters: tuple):
         '''
         Execute a SQL query, returns all the matched results.
         '''
