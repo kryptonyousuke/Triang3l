@@ -24,7 +24,7 @@ class Triang3l(discord.ext.commands.Bot):
 
     @staticmethod
     def generate_hash() -> str:
-        return secrets.token_hex(64)
+        return secrets.token_urlsafe(64)
 
     async def close(self):
         if self.db:
@@ -79,7 +79,7 @@ class Triang3l(discord.ext.commands.Bot):
             embed.title = "Server Registration"
             try:
                 embed.color = colors.green
-                embed.description = f"""Server ID: {interaction.guild_id}\nSuccessfully registered into Tr1angel."""
+                embed.description = f"""Server ID: {interaction.guild_id}\nSuccessfully registered into Triang3l."""
                 await self.db.insert_server(interaction.guild_id)
             except aiosqlite.IntegrityError:
                 embed.color = colors.red
