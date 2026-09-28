@@ -65,7 +65,17 @@ class Database:
                             FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE CASCADE
                         );
                     """)
-        
+        await instance.execute("""
+                        CREATE TABLE IF NOT EXISTS join_requests (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            server_id INTEGER NOT NULL,
+                            group_hash CHAR(64) NOT NULL,
+                            FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE CASCADE,
+                            FOREIGN KEY (group_hash) REFERENCES groups (group_hash)  ON DELETE CASCADE,
+                            UNIQUE(server_id, group_hash)
+                        );
+                    """)
+
 
         return instance
 
@@ -147,3 +157,7 @@ class Database:
                                INSERT INTO punishments (display_id, server_id, group_id, display_name, username, reason, banned_user_id) VALUES (?, ?, ?, ?, ?, ?, ?)
                            """, ((await self.fetch_group_by_id(group_id))["greater_punishment_display_id"] + 1, server_id, group_id, display_name, username, reason, user_id))
 
+    async def create_join_request(self, server_id, group_hash):
+        await self.execute("""
+                               INSERT INTO join_requests (server_id, group_hash) VALUES (?, ?)
+                           """, (server_id, group_hash))

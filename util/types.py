@@ -6,6 +6,12 @@
 
 
 from pydantic import BaseModel, ConfigDict
+
+################################################
+#                    STRUCTS                   #
+################################################
+
+
 class Triang3lObject(BaseModel):
     '''
     The base for all the Triang3l safe and private structs.
@@ -53,3 +59,23 @@ class BannedUser(Triang3lObject):
     reason: str | None = None
     in_server_id: int | None = None
 
+
+
+
+
+
+
+################################################
+#                    ERRORS                    #
+################################################
+
+
+class Triang3lError(Exception):
+    '''
+    Triang3l's base error object.
+    '''
+    pass
+
+
+class Forbidden(Triang3lError):
+    pass

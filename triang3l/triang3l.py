@@ -12,7 +12,7 @@ from discord import app_commands
 
 from database import database
 from session import session_manager as session
-from util.structs import colors, Group, BannedUser
+from util.types import colors, Group, BannedUser
 
 class Triang3l(discord.ext.commands.Bot):
     @session.session
