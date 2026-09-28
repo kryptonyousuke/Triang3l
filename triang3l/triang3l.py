@@ -46,6 +46,16 @@ class Triang3l(discord.ext.commands.Bot):
                 await aioconsole.aprint(f"Failed to sync commands: {e}")
 
         @self.event
+        async def on_tree_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
+            if isinstance(error, app_commands.CommandNotFound):
+                if not interaction.response.is_done():
+                    await interaction.response.send_message(
+                    "This command is not available.",
+                    ephemeral=True
+                )
+                return
+
+        @self.event
         async def on_disconnect():
             await aioconsole.aprint("Triang3l is now disconnected.")
 
@@ -129,7 +139,7 @@ class Triang3l(discord.ext.commands.Bot):
                     try:
                         group.server_owner_name = (await self.fetch_guild(group.server_owner_id)).name
                     except  discord.DiscordException:
-                        group.server_owner_name = "UNKNOW"
+                        group.server_owner_name = "UNKNOWN"
                 group = group.all_valid()
                 if group:
                     groups.append(group)
@@ -146,7 +156,20 @@ class Triang3l(discord.ext.commands.Bot):
             group_hash="Group hash"
         )
         async def joingroup(interaction: discord.Interaction, group_hash: str):
-            await interaction.response.send_message("Pong! Latency: ms")
+            embed = discord.Embed()
+            try:
+                group_id = (await self.db.fetch_group_by_hash(group_hash))["id"]
+                await self.db.create_join_request(interaction.guild_id, group_id)
+                embed.color = colors.green
+                embed.description = "Join request sent!"
+            except aiosqlite.IntegrityError:
+                embed.color = colors.red
+                embed.description = "You must provide a valid hash and can't request twice to the same group."
+            # except aiosqlite.Error:
+            #     embed.color = colors.red
+            #     embed.description = "Database error. Try to contact the bot admins."
+
+            await interaction.response.send_message(embed=embed)
 
         
         @self.tree.command(name="listjoinrequests", description="List servers that requested to join to one of your groups.")

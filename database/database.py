@@ -69,10 +69,10 @@ class Database:
                         CREATE TABLE IF NOT EXISTS join_requests (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             server_id INTEGER NOT NULL,
-                            group_hash CHAR(64) NOT NULL,
+                            group_id INTEGER NOT NULL,
                             FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE CASCADE,
-                            FOREIGN KEY (group_hash) REFERENCES groups (group_hash)  ON DELETE CASCADE,
-                            UNIQUE(server_id, group_hash)
+                            FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,
+                            UNIQUE(server_id, group_id)
                         );
                     """)
 
@@ -150,6 +150,18 @@ class Database:
         }
         return formatted_result
 
+    async def fetch_group_by_hash(self, group_hash: str):
+        result = await self.execute_and_fetch("""
+                                         SELECT * FROM groups WHERE group_hash = (?) 
+                                      """, (group_hash,))
+        formatted_result = {
+            "id": result[0],
+            "name": result[1] ,
+            "server_owner_id": result[2],
+            "greater_punishment_display_id": result[3],
+            "group_hash": result[4]
+        }
+        return formatted_result
 
 
     async def create_punishment(self, user_id: int, display_name: str, username: str, reason: str, server_id: int, group_id: int):
@@ -157,7 +169,7 @@ class Database:
                                INSERT INTO punishments (display_id, server_id, group_id, display_name, username, reason, banned_user_id) VALUES (?, ?, ?, ?, ?, ?, ?)
                            """, ((await self.fetch_group_by_id(group_id))["greater_punishment_display_id"] + 1, server_id, group_id, display_name, username, reason, user_id))
 
-    async def create_join_request(self, server_id, group_hash):
+    async def create_join_request(self, server_id: int, group_id: int):
         await self.execute("""
-                               INSERT INTO join_requests (server_id, group_hash) VALUES (?, ?)
-                           """, (server_id, group_hash))
+                               INSERT INTO join_requests (server_id, group_id) VALUES (?, ?)
+                           """, (server_id, group_id))
