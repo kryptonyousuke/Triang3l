@@ -165,9 +165,9 @@ class Triang3l(discord.ext.commands.Bot):
             except aiosqlite.IntegrityError:
                 embed.color = colors.red
                 embed.description = "You must provide a valid hash and can't request twice to the same group."
-            # except aiosqlite.Error:
-            #     embed.color = colors.red
-            #     embed.description = "Database error. Try to contact the bot admins."
+            except aiosqlite.Error:
+                embed.color = colors.red
+                embed.description = "Database error. Try to contact the bot admins."
 
             await interaction.response.send_message(embed=embed)
 
