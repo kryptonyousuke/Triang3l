@@ -171,15 +171,33 @@ class Triang3l(discord.ext.commands.Bot):
 
             await interaction.response.send_message(embed=embed)
 
-        
+        # FIX: IDOR and error handling
         @self.tree.command(name="listjoinrequests", description="List servers that requested to join to one of your groups.")
         @app_commands.describe(
             group_hash="Group hash"
         )
         async def listjoinrequests(interaction: discord.Interaction, group_hash: str):
-            await interaction.response.send_message("Pong! Latency: ms")
+            embed = discord.Embed()
+            description = ""
+            group = (await self.db.fetch_group_by_hash(group_hash))
+            group_id = group["id"]
 
-        
+            reqs = await self.db.fetch_all_join_requests_by_id(group_id)
+            
+            for req in reqs:
+                display_id = req["id"]
+                server_owner_name = self.get_guild(req["server_id"]).name
+                if not server_owner_name:
+                    try:
+                        server_owner_name = (await self.fetch_guild(group.server_owner_id)).name
+                    except  discord.DiscordException:
+                       server_owner_name = "UNKNOWN"
+                description += f"{display_id} — {server_owner_name}"
+            embed.color = colors.white
+            embed.description = description
+
+            await interaction.response.send_message(embed=embed)
+
         @self.tree.command(name="rotategroupinvite", description="Rotate a group invite to a new hash.")
         @app_commands.describe(
             group_hash="Group hash"

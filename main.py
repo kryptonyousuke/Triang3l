@@ -6,6 +6,7 @@
 
 import discord
 from discord.ext import commands
+
 from triang3l.triang3l import Triang3l
 
 intents = discord.Intents.all()        

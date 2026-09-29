@@ -173,3 +173,17 @@ class Database:
         await self.execute("""
                                INSERT INTO join_requests (server_id, group_id) VALUES (?, ?)
                            """, (server_id, group_id))
+
+    async def fetch_all_join_requests_by_id(self, group_id: int):
+        results = await self.execute_and_fetch_all("""
+                               SELECT * FROM join_requests WHERE group_id = (?)
+                           """, (group_id,))
+        formatted_results = []
+        for result in results:
+            result = {
+                "id": result[0],
+                "server_id": result[1],
+                "group_id": result[2]
+            }
+            formatted_results.append(result)
+        return formatted_results
