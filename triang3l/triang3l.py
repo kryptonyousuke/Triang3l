@@ -182,7 +182,7 @@ class Triang3l(discord.ext.commands.Bot):
             group = (await self.db.fetch_group_by_hash(group_hash))
             group_id = group["id"]
 
-            reqs = await self.db.fetch_all_join_requests_by_id(group_id)
+            reqs = await self.db.fetch_all_join_requests_by_group_id(group_id)
             
             for req in reqs:
                 display_id = req["id"]
@@ -203,16 +203,39 @@ class Triang3l(discord.ext.commands.Bot):
             group_hash="Group hash"
         )
         async def rotategroupinvite(interaction: discord.Interaction, group_hash: str):
-            await interaction.response.send_message("Pong! Latency: ms")
+            embed = discord.Embed()
 
-        
+            try:
+                new_hash = self.generate_hash()
+                await self.db.update_group_hash(group_hash, new_hash)
+                embed.color = colors.green
+                embed.description = f"Successfully updated the hash to `{new_hash}`."
+            except aiosqlite.Error:
+                embed.color = colors.red
+                embed.description = "Database error. Try to contact the bot admins."
+
+            await interaction.response.send_message(embed=embed)
+
         @self.tree.command(name="acceptjoinrequest", description="Accept a join request by id.")
         @app_commands.describe(
-            group_hash="Group hash",
             request_id="Request ID"
         )
-        async def acceptjoinrequest(interaction: discord.Interaction, group_hash: str, request_id: int):
-            await interaction.response.send_message("Pong! Latency: ms")
+        async def acceptjoinrequest(interaction: discord.Interaction, request_id: int):
+            embed = discord.Embed()
+            try:
+                request = await self.db.fetch_join_request_by_id(request_id)
+                await self.db.delete_join_request_by_id(request_id)
+                await self.db.insert_group_linker(request["server_id"], request["group_id"])
+
+                embed.color = colors.green
+                embed.description = "Accepted."
+            except aiosqlite.IntegrityError:
+                embed.color = colors.red
+                embed.description = "Error: invalid data."
+            except aiosqlite.Error:
+                embed.color = colors.red
+                embed.description = "Database error. Try to contact the bot admins."
+            interaction.response.send_message(embed=embed)
 
 
         # Moderation workflow commands.
