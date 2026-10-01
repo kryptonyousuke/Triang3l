@@ -27,54 +27,65 @@ class Database:
         instance = cls(connection)
         await instance.execute("PRAGMA foreign_keys = ON;")
         await instance.execute("""
-                        CREATE TABLE IF NOT EXISTS servers (
-                            id INTEGER PRIMARY KEY NOT NULL UNIQUE
-                        );
-                    """)
+                                CREATE TABLE IF NOT EXISTS servers (
+                                    id INTEGER PRIMARY KEY NOT NULL UNIQUE
+                                );
+                                """)
         await instance.execute("""
-                        CREATE TABLE IF NOT EXISTS groups (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            name TEXT NOT NULL,
-                            server_owner_id INTEGER NOT NULL,
-                            greater_punishment_display_id INTEGER NOT NULL,
-                            group_hash CHAR(64) NOT NULL UNIQUE,
-                            FOREIGN KEY (server_owner_id) REFERENCES servers (id) ON DELETE CASCADE
-                        );
-                    """)
+                                CREATE TABLE IF NOT EXISTS groups (
+                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    name TEXT NOT NULL,
+                                    server_owner_id INTEGER NOT NULL,
+                                    greater_punishment_display_id INTEGER NOT NULL,
+                                    group_hash CHAR(64) NOT NULL UNIQUE,
+                                    FOREIGN KEY (server_owner_id) REFERENCES servers (id) ON DELETE CASCADE
+                                );
+                                """)
         await instance.execute("""
-                        CREATE TABLE IF NOT EXISTS server_groups (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            server_id INTEGER NOT NULL,
-                            group_id INTEGER NOT NULL,
-                            FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,
-                            FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE CASCADE,
-                            UNIQUE (server_id, group_id)
-                        );
-                    """)
+                                CREATE TABLE IF NOT EXISTS server_groups (
+                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    server_id INTEGER NOT NULL,
+                                    group_id INTEGER NOT NULL,
+                                    FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,
+                                    FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE CASCADE,
+                                    UNIQUE (server_id, group_id)
+                                );
+                                """)
         await instance.execute("""
-                        CREATE TABLE IF NOT EXISTS punishments (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            display_id INTEGER NOT NULL,
-                            server_id INTEGER NOT NULL,
-                            group_id INTEGER NOT NULL,
-                            banned_user_id INTEGER NOT NULL,
-                            display_name TEXT,
-                            username TEXT,
-                            reason TEXT NOT NULL,
-                            FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,
-                            FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE CASCADE
-                        );
-                    """)
+                                CREATE TABLE IF NOT EXISTS punishments (
+                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    display_id INTEGER NOT NULL,
+                                    server_id INTEGER NOT NULL,
+                                    group_id INTEGER NOT NULL,
+                                    banned_user_id INTEGER NOT NULL,
+                                    display_name TEXT NOT NULL,
+                                    username TEXT NOT NULL,
+                                    reason TEXT NOT NULL,
+                                    FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,
+                                    FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE CASCADE
+                                );
+                               """)
+
         await instance.execute("""
-                        CREATE TABLE IF NOT EXISTS join_requests (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            server_id INTEGER NOT NULL,
-                            group_id INTEGER NOT NULL,
-                            FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE CASCADE,
-                            FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,
-                            UNIQUE(server_id, group_id)
-                        );
-                    """)
+                                CREATE TABLE IF NOT EXISTS punishment_state (
+                                    id INTEGER PRIMARY KEY NOT NULL,
+                                    server_id INTEGER NOT NULL,
+                                    state INTEGER NOT NULL,
+                                    FOREIGN KEY (id) REFERENCES punishments (id) ON DELETE CASCADE,
+                                    FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE CASCADE
+                                );
+                               """)
+
+        await instance.execute("""
+                                CREATE TABLE IF NOT EXISTS join_requests (
+                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    server_id INTEGER NOT NULL,
+                                    group_id INTEGER NOT NULL,
+                                    FOREIGN KEY (server_id) REFERENCES servers (id) ON DELETE CASCADE,
+                                    FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,
+                                    UNIQUE(server_id, group_id)
+                                );
+                              """)
 
 
         return instance
