@@ -12,7 +12,17 @@ from discord import app_commands
 
 from database import database
 from session import session_manager as session
-from util.types import colors, Group, BannedUser
+from util.types import colors, Group
+
+def punishment_state_to_string(state: int):
+    if state == 0:
+        return "unreviewed"
+    elif state == 1:
+        return "denied"
+    elif state == 2:
+        return "accepted"
+    else:
+        return "invalid"
 
 class Triang3l(discord.ext.commands.Bot):
     @session.session
@@ -75,6 +85,10 @@ class Triang3l(discord.ext.commands.Bot):
         ########################################
         #               COMMANDS               #
         ########################################
+        
+        # TODO:
+        # - create objects into types.py to replace the use of dicts.
+        # 
 
         @self.tree.command(name="ping", description="Show the latency.")
         async def ping(interaction: discord.Interaction):
@@ -225,7 +239,7 @@ class Triang3l(discord.ext.commands.Bot):
             try:
                 request = await self.db.fetch_join_request_by_id(request_id)
                 await self.db.delete_join_request_by_id(request_id)
-                await self.db.insert_group_linker(request["server_id"], request["group_id"])
+                await self.db.insert_group_link(request["server_id"], request["group_id"])
 
                 embed.color = colors.green
                 embed.description = "Accepted."
@@ -244,7 +258,22 @@ class Triang3l(discord.ext.commands.Bot):
             group_hash="Group hash"
         )
         async def banlist(interaction: discord.Interaction, group_hash: str):
-            await interaction.response.send_message("Pong! Latency: ms")
+            embed = discord.Embed()
+
+            try:
+                punishments = await self.db.fetch_all_server_punishments(interaction.guild_id, group_hash)
+
+                description = "```ansi\n"
+
+                for punishment in punishments:
+                    description += f"{punishment['display_name']} ({punishment['username']}) — {punishment['reason']} ({punishment_state_to_string(punishment['state'])})\n"
+
+                description += "```"
+            except aiosqlite.Error:
+                embed.color = colors.red
+                embed.description = "Database error. Try to contact the bot admins."
+
+            await interaction.response.send_message(embed=embed)
 
         
         @self.tree.command(name="accept", description="Accept a specific ban by id.")
@@ -297,3 +326,4 @@ class Triang3l(discord.ext.commands.Bot):
             await interaction.response.send_message("Pong! Latency: ms")
     def run_bot(self):
         self.run(self.token)
+

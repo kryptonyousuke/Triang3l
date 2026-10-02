@@ -122,7 +122,7 @@ class Database:
 
     async def insert_server(self, server_id: int):
         await self.execute("""
-                               INSERT INTO servers VALUES ?
+                               INSERT INTO servers VALUES (?)
                            """, (server_id,))
 
     async def insert_group(self, group_name: str, server_id: int, group_hash: str):
@@ -130,23 +130,23 @@ class Database:
                                     INSERT INTO groups (name, server_owner_id, greater_punishment_display_id, group_hash) VALUES (?, ?, ?, ?)
                                   """, (group_name, server_id, 0, group_hash))
 
-    async def insert_group_linker(self, server_id: int, group_id):
+    async def insert_group_link(self, server_id: int, group_id):
          await self.execute("""
                                INSERT INTO server_groups (server_id, group_id) VALUES (?, ?)
                             """, (server_id, group_id))
 
     async def create_group(self, group_name: str, server_id: int, group_hash: str):
         row_id = await self.insert_group(group_name, server_id, group_hash)
-        await self.insert_group_linker(server_id, row_id)
+        await self.insert_group_link(server_id, row_id)
 
     async def update_group_hash(self, old_hash: str, new_hash: str):
         await self.execute("""
-                               UPDATE groups SET group_hash = ? WHERE group_hash = ?
+                               UPDATE groups SET group_hash = (?) WHERE group_hash = (?)
                            """, (new_hash, old_hash))
 
     async def fetch_groups(self, server_id: int) -> dict:
         results = await self.execute_and_fetch_all("""
-                                                    SELECT * FROM server_groups WHERE server_id = ?
+                                                    SELECT * FROM server_groups WHERE server_id = (?)
                                                 """, (server_id,))
         formatted_results = []
         for result in results:
@@ -161,7 +161,7 @@ class Database:
 
     async def fetch_group_by_id(self, group_id: int):
         result = await self.execute_and_fetch("""
-                                         SELECT * FROM groups WHERE id = ?
+                                         SELECT * FROM groups WHERE id = (?)
                                       """, (group_id,))
         formatted_result = {
             "id": result[0],
@@ -174,7 +174,7 @@ class Database:
 
     async def fetch_group_by_hash(self, group_hash: str):
         result = await self.execute_and_fetch("""
-                                         SELECT * FROM groups WHERE group_hash = ?
+                                         SELECT * FROM groups WHERE group_hash = (?)
                                       """, (group_hash,))
         formatted_result = {
             "id": result[0],
@@ -185,10 +185,27 @@ class Database:
         }
         return formatted_result
 
-    async def create_punishment(self, user_id: int, display_name: str, username: str, reason: str, server_id: int, group_id: int):
-        await self.execute("""
+    async def insert_punishment(self, user_id: int, display_name: str, username: str, reason: str, server_id: int, group_id: int):
+        return await self.execute("""
                                INSERT INTO punishments (display_id, server_id, group_id, display_name, username, reason, banned_user_id) VALUES (?, ?, ?, ?, ?, ?, ?)
                            """, ((await self.fetch_group_by_id(group_id))["greater_punishment_display_id"] + 1, server_id, group_id, display_name, username, reason, user_id))
+
+    async def insert_punishment_state_link(self, server_id: int, punishment_id: int):
+        # 0 -> unreviewed
+        # 1 -> denied
+        # 2 -> accepted
+        await self.execute("""
+                               INSERT INTO punishment_state VALUES (?, ?, ?)
+                           """, (server_id, punishment_id, 0))
+
+    async def create_punishment(self, user_id: int, display_name: str, username: str, reason: str, server_id: int, group_id: int):
+        row_id = await self.insert_punishment(user_id, display_name, username, reason, server_id, group_id)
+        await self.insert_punishment_state_link(server_id, row_id)
+
+    async def update_punishment_state(self, punishment_id: int, new_state: int):
+        await self.execute("""
+                               UPDATE punishment_state SET state = (?) WHERE id = (?)
+                           """, (punishment_id, new_state))
 
     async def create_join_request(self, server_id: int, group_id: int):
         await self.execute("""
@@ -199,9 +216,10 @@ class Database:
         await self.execute("""
                                DELETE FROM join_requests WHERE id = (?)
                            """, (req_id,))
+
     async def fetch_join_request_by_id(self, request_id: int):
         result = await self.execute_and_fetch("""
-                                                  SELECT * FROM join_requests WHERE id = ?
+                                                  SELECT * FROM join_requests WHERE id = (?)
                                               """, (request_id,))
         formatted_result = {
             "id": result[0],
@@ -210,9 +228,10 @@ class Database:
         }
 
         return formatted_result
+
     async def fetch_all_join_requests_by_group_id(self, group_id: int):
         results = await self.execute_and_fetch_all("""
-                               SELECT * FROM join_requests WHERE group_id = ?
+                               SELECT * FROM join_requests WHERE group_id = (?)
                            """, (group_id,))
         formatted_results = []
         for result in results:
@@ -223,3 +242,36 @@ class Database:
             }
             formatted_results.append(result)
         return formatted_results
+
+    async def fetch_punishment_by_id(self, punishment_id: int):
+        result = await self.execute_and_fetch("""
+                                                  SELECT * FROM punishments WHERE id = (?)
+                                              """, (punishment_id,))
+        formatted_result = {
+            "id": result[0],
+            "display_id": result[1],
+            "server_id": result[2],
+            "group_id": result[3],
+            "banned_user_id": result[4],
+            "display_name": result[5],
+            "username": result[6],
+            "reason": result[7]
+        }
+
+        return formatted_result
+
+    async def fetch_all_server_group_punishments(self, server_id: int, group_hash: str):
+        results = await self.execute("""
+                                         SELECT * FROM punishments WHERE server_id = (?)
+                                     """, (server_id,))
+        group_id = self.fetch_group_by_hash(group_hash)["id"]
+
+        punishments  = []
+        for result in results:
+            punishment = await self.fetch_punishment_by_id(result[0])
+            punishment["state"] = result[2]
+            if punishment["group_id"] == group_id:
+                punishments.append(punishment)
+
+        return punishments
+
