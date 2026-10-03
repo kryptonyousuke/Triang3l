@@ -6,6 +6,7 @@
 
 
 import aiosqlite
+from util.types import NotAvailable
 
 class Database:
     '''
@@ -107,14 +108,20 @@ class Database:
         Execute a SQL query, returns the first match.
         '''
         async with self.connection.execute(query, parameters) as cursor:
-            return await cursor.fetchone()
+            value = await cursor.fetchone()
+            if not value:
+                raise NotAvailable("No data found.")
+            return value
 
     async def execute_and_fetch_all(self, query: str, parameters: tuple):
         '''
         Execute a SQL query, returns all the matched results.
         '''
         async with self.connection.execute(query, parameters) as cursor:
-            return await cursor.fetchall()
+            values =  await cursor.fetchall()
+            if len(values) < 1:
+                raise NotAvailable("No data found.")
+            return values
 
     #########################################################
     #                  Application Queries                  #

@@ -12,6 +12,7 @@ from discord import app_commands
 
 from database import database
 from session import session_manager as session
+from util import types as Triang3lTypes
 from util.types import colors, Group
 
 def punishment_state_to_string(state: int):
@@ -193,22 +194,29 @@ class Triang3l(discord.ext.commands.Bot):
         async def listjoinrequests(interaction: discord.Interaction, group_hash: str):
             embed = discord.Embed()
             description = ""
-            group = (await self.db.fetch_group_by_hash(group_hash))
-            group_id = group["id"]
+            try:
+                group = (await self.db.fetch_group_by_hash(group_hash))
+                group_id = group["id"]
 
-            reqs = await self.db.fetch_all_join_requests_by_group_id(group_id)
-            
-            for req in reqs:
-                display_id = req["id"]
-                server_owner_name = self.get_guild(req["server_id"]).name
-                if not server_owner_name:
-                    try:
-                        server_owner_name = (await self.fetch_guild(group.server_owner_id)).name
-                    except  discord.DiscordException:
-                       server_owner_name = "UNKNOWN"
-                description += f"{display_id} — {server_owner_name}"
-            embed.color = colors.white
-            embed.description = description
+                reqs = await self.db.fetch_all_join_requests_by_group_id(group_id)
+                
+                for req in reqs:
+                    display_id = req["id"]
+                    server_owner_name = self.get_guild(req["server_id"]).name
+                    if not server_owner_name:
+                        try:
+                            server_owner_name = (await self.fetch_guild(group.server_owner_id)).name
+                        except  discord.DiscordException:
+                           server_owner_name = "UNKNOWN"
+                    description += f"{display_id} — {server_owner_name}"
+                embed.color = colors.white
+                embed.description = description
+            except aiosqlite.Error:
+                embed.description = "Database error. Try to contact the bot admins."
+                embed.color = colors.red
+            except Triang3lTypes.NotAvailable:
+                embed.description = "No data available."
+                embed.color = colors.red
 
             await interaction.response.send_message(embed=embed)
 
@@ -238,7 +246,7 @@ class Triang3l(discord.ext.commands.Bot):
             embed = discord.Embed()
             try:
                 request = await self.db.fetch_join_request_by_id(request_id)
-                await self.db.delete_join_request_by_id(request_id)
+                await self.db.delete_join_request_by_id(request["id"]) # depends on the past awaited data to avoid async data races
                 await self.db.insert_group_link(request["server_id"], request["group_id"])
 
                 embed.color = colors.green
@@ -249,6 +257,7 @@ class Triang3l(discord.ext.commands.Bot):
             except aiosqlite.Error:
                 embed.color = colors.red
                 embed.description = "Database error. Try to contact the bot admins."
+            
             await interaction.response.send_message(embed=embed)
 
 

@@ -79,3 +79,6 @@ class Triang3lError(Exception):
 
 class Forbidden(Triang3lError):
     pass
+
+class NotAvailable(Triang3lError):
+    pass
