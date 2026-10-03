@@ -249,7 +249,7 @@ class Triang3l(discord.ext.commands.Bot):
             except aiosqlite.Error:
                 embed.color = colors.red
                 embed.description = "Database error. Try to contact the bot admins."
-            interaction.response.send_message(embed=embed)
+            await interaction.response.send_message(embed=embed)
 
 
         # Moderation workflow commands.
